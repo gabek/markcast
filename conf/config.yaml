@@ -1,0 +1,13 @@
+paths:
+  input: input
+  output: /Users/gabek/src/gabekangas.com/content/mixes
+
+defaults:
+  rssTags: [music, mixes, audio]
+  rssCategories: [DJ Mixes]
+
+author:
+  name: Gabe Kangas
+  email: gabek@real-ity.com
+  website: https://gabekangas.com
+  image: /images/avatar-64x64.png
