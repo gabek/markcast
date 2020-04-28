@@ -28,6 +28,12 @@ func main() {
 		post := generatePostForFile(f)
 
 		outputDirectory := config.Paths.OutputDirectory + "/" + post.Slug
+		// Don't overwrite files that have been previously generated
+		if FileExists(outputDirectory) {
+			log.Println(outputDirectory + " already exists.  Ignoring.")
+			continue
+		}
+
 		_ = os.Mkdir(outputDirectory, os.ModePerm)
 
 		newMarkdownFile, _ := os.Create(outputDirectory + "/" + post.Slug + ".md")
