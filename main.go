@@ -29,7 +29,7 @@ func main() {
 
 		outputDirectory := config.Paths.OutputDirectory + "/" + post.Slug
 		// Don't overwrite files that have been previously generated
-		if FileExists(outputDirectory) {
+		if FileExists(outputDirectory + "/" + post.Slug + ".md") {
 			log.Println(outputDirectory + " already exists.  Ignoring.")
 			continue
 		}
@@ -58,19 +58,19 @@ func generatePostForFile(filename string) Post {
 	newFilename := "/mixes/" + slug + "/" + slug + ".mp3"
 	outputDirectory := config.Paths.OutputDirectory + "/" + slug
 	_ = os.Mkdir(outputDirectory, os.ModePerm)
+	info, err := os.Stat(filename)
 
 	filesystemLocationOfAudio := outputDirectory + "/" + slug + ".mp3"
 	os.Rename(filename, filesystemLocationOfAudio)
-	info, err := os.Stat(filesystemLocationOfAudio)
 
 	post := Post{}
 	post.Title = metadata.Title()
 	description := metadata.Comment()
 	post.Description = &description
 	post.Date = string(info.ModTime().Format("2006-01-02"))
-	post.Type = "post"
 	post.Enclosure = &newFilename
 	post.Slug = slug
+	post.Type = "post"
 
 	author := Author{}
 	if config.Author.Name == nil {
@@ -111,8 +111,7 @@ func generatePostForFile(filename string) Post {
 	post.Categories = append(post.Categories, config.Defaults.DefaultRSSCategories...)
 
 	post.Content = metadata.Comment()
-
-	os.Rename(newFilename, outputDirectory+"/"+newFilename)
+	post.Tracklist = generateTracklistForMP3(filename)
 
 	return post
 }
@@ -122,10 +121,17 @@ func generateSlugFromTitle(title string) string {
 	return strings.Trim(re.ReplaceAllString(strings.ToLower(title), "-"), "-")
 }
 
+func generateTracklistForMP3(filepath string) string {
+	cuefile := strings.Replace(filepath, ".mp3", ".cue", -1)
+	if !FileExists(cuefile) {
+		return ""
+	}
+	return generateTracklistFromCue(cuefile)
+}
+
 func generateEmbedHTMLForFilename(filename string) string {
 	html := `<audio controls preload="metadata" style=" width:300px;">
 	<source src="{{.Filename}}" type="audio/mpeg">
-	Your browser does not support the audio element.
 </audio>
 	`
 
@@ -154,11 +160,17 @@ func generateOutputStringForPost(post Post) string {
 <center>{{.PlayerHTML}}</center>
 
 <br>
-<h4>{{.Content}}</h4>
+
+{{.Content}}
+
+<br>
+<h4>Tracklist</h4>
+{{.Tracklist}}
 `
 
 	type DataValues struct {
 		Content     string
+		Tracklist   string
 		FrontMatter string
 		PlayerHTML  string
 		Image       string
@@ -172,8 +184,11 @@ func generateOutputStringForPost(post Post) string {
 	data := DataValues{}
 	data.FrontMatter = string(frontMatterData)
 	data.Content = post.Content
+	data.Tracklist = post.Tracklist
 	data.PlayerHTML = generateEmbedHTMLForFilename(*post.Enclosure)
-	data.Image = *post.CardHeaderImage
+	if post.CardHeaderImage != nil {
+		data.Image = *post.CardHeaderImage
+	}
 
 	tmpl := template.New("markdown")
 
